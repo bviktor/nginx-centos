@@ -50,7 +50,7 @@ sed -i "s/#include srv-${METHOD}/include srv-${METHOD}/g" ${NGINX_ROOT}/conf.d/h
 if [ ${METHOD} == 'upstream' ]
 then
     echo 'Fixing SELinux permissions'
-    yum -y install policycoreutils-python setools-console
+    yum install policycoreutils-python setools-console
     echo 'type=AVC msg=audit(1443806547.648:1986): avc:  denied  { name_connect } for  pid=46116 comm="nginx" dest=8080 scontext=system_u:system_r:httpd_t:s0 tcontext=system_u:object_r:http_cache_port_t:s0 tclass=tcp_socket' | audit2allow -M nginx
     semodule -i nginx.pp
 fi
