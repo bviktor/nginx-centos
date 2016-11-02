@@ -55,6 +55,9 @@ then
     semodule -i nginx.pp
 fi
 
+echo 'Symlinking dehydrated certificates'
+ln -s /opt/dehydrated/certs /etc/nginx/ssl
+
 echo 'Testing Nginx config'
 nginx -t
 
