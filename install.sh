@@ -23,7 +23,7 @@ echo 'Setting up directory structure'
 mkdir -p /var/www/public_html
 chown -R nginx:nginx /var/www/public_html
 restorecon -rv /var/www
-mkdir ${NGINX_ROOT}/conf.d-enabled
+mkdir -p ${NGINX_ROOT}/conf.d-enabled
 mv ${NGINX_ROOT}/nginx.conf ${NGINX_ROOT}/nginx.conf.orig
 cp ssl.conf ${NGINX_ROOT}
 cp srv-php.conf ${NGINX_ROOT}
