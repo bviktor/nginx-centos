@@ -17,7 +17,7 @@ yum install nginx
 systemctl enable nginx.service
 
 echo 'Generating a DH parameters file'
-openssl dhparam -out /etc/nginx/dh4096.pem 4096
+openssl dhparam -out ${NGINX_ROOT}/dh4096.pem 4096
 
 echo 'Setting up directory structure'
 mkdir -p /var/www/public_html
@@ -25,13 +25,17 @@ chown -R nginx:nginx /var/www/public_html
 restorecon -rv /var/www
 mkdir -p ${NGINX_ROOT}/conf.d-enabled
 mv ${NGINX_ROOT}/nginx.conf ${NGINX_ROOT}/nginx.conf.orig
-cp ssl.conf ${NGINX_ROOT}
-cp srv-php.conf ${NGINX_ROOT}
-cp srv-static.conf ${NGINX_ROOT}
-cp srv-upstream.conf ${NGINX_ROOT}
-cp nginx.conf ${NGINX_ROOT}
 cp conf.d/host.conf ${NGINX_ROOT}/conf.d
-ln -s /etc/nginx/conf.d/host.conf /etc/nginx/conf.d-enabled
+ln -s ${NGINX_ROOT}/conf.d/host.conf ${NGINX_ROOT}/conf.d-enabled
+
+git clone https://github.com/bviktor/nginx-centos.git ${NGINX_ROOT}/upstream
+pushd ${NGINX_ROOT}
+ln -s upstream/ssl.conf .
+ln -s upstream/srv-php.conf .
+ln -s upstream/srv-static.conf .
+ln -s upstream/srv-upstream.conf .
+ln -s upstream/nginx.conf .
+popd
 
 echo 'Adding firewall rules for HTTP and HTTPS traffic'
 firewall-cmd --add-service http --permanent
@@ -39,7 +43,7 @@ firewall-cmd --add-service https --permanent
 firewall-cmd --reload
 
 echo 'Fixing permissions'
-restorecon -Rv /etc/nginx
+restorecon -Rv ${NGINX_ROOT}
 restorecon -Rv /var/www
 
 echo 'Setting up host.conf'
@@ -56,7 +60,7 @@ then
 fi
 
 echo 'Symlinking dehydrated certificates'
-ln -s /opt/dehydrated/certs /etc/nginx/ssl
+ln -s /opt/dehydrated/certs ${NGINX_ROOT}/ssl
 
 echo 'Testing Nginx config'
 nginx -t
