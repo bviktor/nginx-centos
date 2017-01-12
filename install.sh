@@ -66,3 +66,4 @@ echo 'Testing Nginx config'
 nginx -t
 
 echo "Nginx config seems to work fine. You can start Nginx with 'systemctl start nginx.service'."
+echo "To keep yourself up-to-date, make sure to regularly perform 'git -C /etc/nginx/upstream'."
