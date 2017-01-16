@@ -61,17 +61,46 @@ ln -s /opt/dehydrated/certs ${NGINX_ROOT}/ssl
 echo 'Setting up hpkp.conf'
 mkdir -p ${NGINX_ROOT}/hpkp
 pushd ${NGINX_ROOT}/hpkp
-touch hpkp.conf
-echo 'Generating first backup CSR and private key'
-openssl req -new -newkey rsa:4096 -nodes -out ${HNAME}_backup1.csr -keyout ${HNAME}_backup1.key -subj "/C=/ST=/L=/O=/CN=${HNAME}"
-echo 'Generating second backup CSR and private key'
-openssl req -new -newkey rsa:4096 -nodes -out ${HNAME}_backup2.csr -keyout ${HNAME}_backup2.key -subj "/C=/ST=/L=/O=/CN=${HNAME}"
-echo "# only change this to 'Public-Key-Pins' if you know what you're doing" >> hpkp.conf
-echo -n 'add_header Public-Key-Pins-Report-Only ' >> hpkp.conf
-echo -n "'pin-sha256=\""$(openssl x509 -pubkey < ${NGINX_ROOT}/ssl/${HNAME}/cert.pem | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64)"\"; " >> hpkp.conf
-echo -n "pin-sha256=\""$(openssl req -pubkey < ${HNAME}_backup1.csr | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64)"\"; " >> hpkp.conf
-echo -n "pin-sha256=\""$(openssl req -pubkey < ${HNAME}_backup2.csr | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64)"\"; " >> hpkp.conf
-echo -n "max-age=10';" >> hpkp.conf
+
+cat << EOF > hpkp.sh
+#!/bin/sh
+
+NGINX_ROOT=${NGINX_ROOT}
+HPKP_AGE=10
+
+# changing this can render your site permanently inaccessible, handle with extreme caution!
+DEPLOY_HPKP=0
+
+generate_pin ()
+{
+    echo -n "pin-sha256=\""
+    grep -i "begin ec private key" --quiet \${1}
+    USE_RSA=\$?
+    if [ \${USE_RSA} -eq 1 ]
+    then
+        echo -n \$(openssl rsa -in \${1} -pubout 2>/dev/null | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64)
+    else
+        echo -n \$(openssl ec -in \${1} -pubout 2>/dev/null | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64)
+    fi
+    echo -n "\"; "
+}
+
+if [ \${1} == "deploy_cert" ]
+then
+    echo 'Regenerating public key pins using new private keys'
+    if [ \${DEPLOY_HPKP} -eq 1 ]
+    then
+        echo -n "add_header Public-Key-Pins '" > \${NGINX_ROOT}/hpkp/hpkp.conf
+    else
+        echo -n "add_header Public-Key-Pins-Report-Only '" > \${NGINX_ROOT}/hpkp/hpkp.conf
+    fi
+    generate_pin "\${NGINX_ROOT}/ssl/\${2}/privkey.pem" >> \${NGINX_ROOT}/hpkp/hpkp.conf
+    generate_pin "\${NGINX_ROOT}/ssl/\${2}/privkey.roll.pem" >> \${NGINX_ROOT}/hpkp/hpkp.conf
+    echo "max-age=\${HPKP_AGE}';" >> \${NGINX_ROOT}/hpkp/hpkp.conf
+fi
+EOF
+chmod +x hpkp.sh
+sh hpkp.sh
 popd
 
 echo 'Fixing permissions'
