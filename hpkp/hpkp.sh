@@ -42,9 +42,10 @@ then
         \cp -f ${NGINX_ROOT}/hpkp/hpkp.conf ${NGINX_ROOT}/hpkp/hpkp.conf.bak
     fi
     echo 'Regenerating public key pins using new private keys'
+    echo '# THIS FILE IS GENERATED, ANY MODIFICATIONS WILL BE DISCARDED' > ${NGINX_ROOT}/hpkp/hpkp.conf
     if [ ${DEPLOY_HPKP} -eq 1 ]
     then
-        echo -n "add_header Public-Key-Pins '" > ${NGINX_ROOT}/hpkp/hpkp.conf
+        echo -n "add_header Public-Key-Pins '" >> ${NGINX_ROOT}/hpkp/hpkp.conf
     else
         echo -n "add_header Public-Key-Pins-Report-Only '" > ${NGINX_ROOT}/hpkp/hpkp.conf
     fi
