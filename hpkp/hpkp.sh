@@ -9,8 +9,10 @@ NGINX_ROOT=/etc/nginx
 generate_pin ()
 {
     echo -n "pin-sha256=\""
+    set +e
     grep -i "begin ec private key" --quiet ${1}
     USE_RSA=$?
+    set -e
     if [ ${USE_RSA} -eq 1 ]
     then
         echo -n $(openssl rsa -in ${1} -pubout 2>/dev/null | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64)
