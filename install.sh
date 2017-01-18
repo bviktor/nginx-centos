@@ -68,7 +68,6 @@ openssl genrsa -out ${PKEY_FILE} 4096
 BACKUP_PIN=$(openssl rsa -in ${PKEY_FILE} -pubout 2>/dev/null | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64)
 sed -i "s@fixme@${BACKUP_PIN}@g" hpkp-config.sh
 echo "Backup key saved as ${NGINX_ROOT}/hpkp/${PKEY_FILE}. Please move it to a secure location, preferably off-server."
-chmod +x hpkp.sh
 sh hpkp.sh deploy_cert ${HNAME}
 popd
 
