@@ -61,44 +61,13 @@ ln -s /opt/dehydrated/certs ${NGINX_ROOT}/ssl
 echo 'Setting up hpkp.conf'
 mkdir -p ${NGINX_ROOT}/hpkp
 pushd ${NGINX_ROOT}/hpkp
-
-cat << EOF > hpkp.sh
-#!/bin/sh
-
-NGINX_ROOT=${NGINX_ROOT}
-HPKP_AGE=10
-
-# changing this can render your site permanently inaccessible, handle with extreme caution!
-DEPLOY_HPKP=0
-
-generate_pin ()
-{
-    echo -n "pin-sha256=\""
-    grep -i "begin ec private key" --quiet \${1}
-    USE_RSA=\$?
-    if [ \${USE_RSA} -eq 1 ]
-    then
-        echo -n \$(openssl rsa -in \${1} -pubout 2>/dev/null | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64)
-    else
-        echo -n \$(openssl ec -in \${1} -pubout 2>/dev/null | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64)
-    fi
-    echo -n "\"; "
-}
-
-if [ \${1} == "deploy_cert" ]
-then
-    echo 'Regenerating public key pins using new private keys'
-    if [ \${DEPLOY_HPKP} -eq 1 ]
-    then
-        echo -n "add_header Public-Key-Pins '" > \${NGINX_ROOT}/hpkp/hpkp.conf
-    else
-        echo -n "add_header Public-Key-Pins-Report-Only '" > \${NGINX_ROOT}/hpkp/hpkp.conf
-    fi
-    generate_pin "\${NGINX_ROOT}/ssl/\${2}/privkey.pem" >> \${NGINX_ROOT}/hpkp/hpkp.conf
-    generate_pin "\${NGINX_ROOT}/ssl/\${2}/privkey.roll.pem" >> \${NGINX_ROOT}/hpkp/hpkp.conf
-    echo "max-age=\${HPKP_AGE}';" >> \${NGINX_ROOT}/hpkp/hpkp.conf
-fi
-EOF
+ln -s ../upstream/hpkp/hpkp.sh .
+cp ../upstream/hpkp/hpkp-config.sh .
+PKEY_FILE="privkey-backup-${HNAME}.pem"
+openssl genrsa -out ${PKEY_FILE} 4096
+BACKUP_PIN=$(openssl rsa -in ${PKEY_FILE} -pubout 2>/dev/null | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64)
+sed -i "s@fixme@${BACKUP_PIN}@g" hpkp-config.sh
+echo "Backup key saved as ${NGINX_ROOT}/hpkp/${PKEY_FILE}. Please move it to a secure location, preferably off-server."
 chmod +x hpkp.sh
 sh hpkp.sh
 popd
