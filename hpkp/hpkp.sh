@@ -34,8 +34,11 @@ then
     echo ""
 elif [ ${1} == "deploy_cert" ]
 then
-    echo 'Backing up current hpkp.conf'
-    \cp -f ${NGINX_ROOT}/hpkp/hpkp.conf ${NGINX_ROOT}/hpkp/hpkp.conf.bak
+    if [ -e ${NGINX_ROOT}/hpkp/hpkp.conf ]
+    then
+        echo 'Backing up current hpkp.conf'
+        \cp -f ${NGINX_ROOT}/hpkp/hpkp.conf ${NGINX_ROOT}/hpkp/hpkp.conf.bak
+    fi
     echo 'Regenerating public key pins using new private keys'
     if [ ${DEPLOY_HPKP} -eq 1 ]
     then
