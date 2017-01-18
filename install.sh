@@ -69,7 +69,7 @@ BACKUP_PIN=$(openssl rsa -in ${PKEY_FILE} -pubout 2>/dev/null | openssl pkey -pu
 sed -i "s@fixme@${BACKUP_PIN}@g" hpkp-config.sh
 echo "Backup key saved as ${NGINX_ROOT}/hpkp/${PKEY_FILE}. Please move it to a secure location, preferably off-server."
 chmod +x hpkp.sh
-sh hpkp.sh
+sh hpkp.sh deploy_cert ${HNAME}
 popd
 
 echo 'Fixing permissions'
