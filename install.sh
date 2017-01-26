@@ -59,7 +59,7 @@ if [ ! -z ${HPKP} ]
 then
     if [ ${HPKP} == 'y' ] || [ ${HPKP} == 'Y' ]
     then
-        sed -i "s/#include hpkp.conf/include hpkp.conf/g" ${NGINX_ROOT}/conf.d/host.conf
+        sed -i "s/#include hpkp.conf;/include hpkp.conf;/g" ${NGINX_ROOT}/conf.d/host.conf
         echo 'HPKP enabled'
     fi
 fi
