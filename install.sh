@@ -54,22 +54,18 @@ then
     echo 'type=AVC msg=audit(1443806547.648:1986): avc:  denied  { name_connect } for  pid=46116 comm="nginx" dest=8080 scontext=system_u:system_r:httpd_t:s0 tcontext=system_u:object_r:http_cache_port_t:s0 tclass=tcp_socket' | audit2allow -M nginx
     semodule -i nginx.pp
 fi
+read -p 'Do you want to enable HPKP via hpkpinx? [y/N]' HPKP
+if [ ! -z ${HPKP} ]
+then
+    if [ ${HPKP} == 'y' ] || [ ${HPKP} == 'Y' ]
+    then
+        sed -i "s/#include hpkp.conf/include hpkp.conf/g" ${NGINX_ROOT}/conf.d/host.conf
+        echo 'HPKP enabled'
+    fi
+fi
 
 echo 'Symlinking dehydrated certificates'
 ln -s /opt/dehydrated/certs ${NGINX_ROOT}/ssl
-
-echo 'Setting up hpkp.conf'
-mkdir -p ${NGINX_ROOT}/hpkp
-pushd ${NGINX_ROOT}/hpkp
-ln -s ../upstream/hpkp/hpkp.sh .
-cp ../upstream/hpkp/hpkp-config.sh .
-PKEY_FILE="privkey-backup-${HNAME}.pem"
-openssl genrsa -out ${PKEY_FILE} 4096
-BACKUP_PIN=$(openssl rsa -in ${PKEY_FILE} -pubout 2>/dev/null | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64)
-sed -i "s@fixme@${BACKUP_PIN}@g" hpkp-config.sh
-echo "Backup key saved as ${NGINX_ROOT}/hpkp/${PKEY_FILE}. Please move it to a secure location, preferably off-server."
-sh hpkp.sh deploy_cert ${HNAME}
-popd
 
 echo 'Fixing permissions'
 restorecon -Rv ${NGINX_ROOT}
