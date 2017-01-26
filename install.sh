@@ -65,7 +65,7 @@ then
 fi
 
 echo 'Symlinking dehydrated certificates'
-ln -s /opt/dehydrated/certs ${NGINX_ROOT}/ssl
+ln -sT /opt/dehydrated/certs ${NGINX_ROOT}/certs
 
 echo 'Fixing permissions'
 restorecon -Rv ${NGINX_ROOT}
