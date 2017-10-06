@@ -54,15 +54,16 @@ then
     echo 'type=AVC msg=audit(1443806547.648:1986): avc:  denied  { name_connect } for  pid=46116 comm="nginx" dest=8080 scontext=system_u:system_r:httpd_t:s0 tcontext=system_u:object_r:http_cache_port_t:s0 tclass=tcp_socket' | audit2allow -M nginx
     semodule -i nginx.pp
 fi
-read -p 'Do you want to enable HPKP via hpkpinx? [y/N]' HPKP
-if [ ! -z ${HPKP} ]
-then
-    if [ ${HPKP} == 'y' ] || [ ${HPKP} == 'Y' ]
-    then
-        sed -i "s/#include hpkp.conf;/include hpkp.conf;/g" ${NGINX_ROOT}/conf.d/host.conf
-        echo 'HPKP enabled'
-    fi
-fi
+
+#read -p 'Do you want to enable HPKP via hpkpinx? [y/N]' HPKP
+#if [ ! -z ${HPKP} ]
+#then
+#    if [ ${HPKP} == 'y' ] || [ ${HPKP} == 'Y' ]
+#    then
+#        sed -i "s/#include hpkp.conf;/include hpkp.conf;/g" ${NGINX_ROOT}/conf.d/host.conf
+#        echo 'HPKP enabled'
+#    fi
+#fi
 
 echo 'Symlinking dehydrated certificates'
 ln -sT /opt/dehydrated/certs ${NGINX_ROOT}/certs
