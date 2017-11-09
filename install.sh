@@ -16,8 +16,13 @@ EOF
 yum install nginx
 systemctl enable nginx.service
 
-echo 'Generating a DH parameters file'
-openssl dhparam -out ${NGINX_ROOT}/dh4096.pem 4096
+if [ -e dh4096.pem ]
+then
+    cp dh4096.pem ${NGINX_ROOT}
+else
+    echo 'Generating a DH parameters file'
+    openssl dhparam -out ${NGINX_ROOT}/dh4096.pem 4096
+fi
 
 echo 'Setting up directory structure'
 mkdir -p /var/www/public_html
