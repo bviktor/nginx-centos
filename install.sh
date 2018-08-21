@@ -80,7 +80,22 @@ sed -i "s/#include srv-${METHOD}/include srv-${METHOD}/g" ${NGINX_ROOT}/conf.d/h
 mkdir -p ${NGINX_ROOT}/certs/${HNAME}
 
 case ${METHOD} in
-    php|static)
+    php)
+        echo 'Installing PHP dependencies'
+        yum install php-fpm php-pdo php-mysql
+        echo 'Configuring PHP-FPM'
+        sed -i 's@listen = 127.0.0.1:9000@listen = /var/run/php-fpm/php-fpm.sock@' /etc/php-fpm.d/www.conf
+        sed -i 's@;listen.owner = nobody@listen.owner = nobody@' /etc/php-fpm.d/www.conf
+        sed -i 's@;listen.group = nobody@listen.group = nobody@' /etc/php-fpm.d/www.conf
+        sed -i 's@user = apache@user = nginx@' /etc/php-fpm.d/www.conf
+        sed -i 's@group = apache@group = nginx@' /etc/php-fpm.d/www.conf
+        systemctl enable php-fpm.service
+        systemctl start php-fpm.service
+        echo 'Fixing document root'
+        sed -i "s@#root /var/www/html;@root /var/www/html;@g" ${NGINX_ROOT}/conf.d/host.conf
+        ;;
+
+    static)
         echo 'Fixing document root'
         sed -i "s@#root /var/www/html;@root /var/www/html;@g" ${NGINX_ROOT}/conf.d/host.conf
         ;;
