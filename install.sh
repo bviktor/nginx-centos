@@ -1,8 +1,32 @@
 #!/bin/sh
 
-set -e
+set -eu
 
 export NGINX_ROOT=/etc/nginx
+
+function deploy_selinux_policy
+{
+    MODULE=${1}
+
+    # this will create a .mod file
+    checkmodule -M -m -o ${MODULE}.mod ${MODULE}.te
+
+    # this will create a compiled semodule
+    semodule_package -m ${MODULE}.mod -o ${MODULE}.pp
+
+    # this will install the module
+    semodule -i ${MODULE}.pp
+}
+
+if [ ! -d "/root/.acme.sh" ]
+then
+    echo 'Error! The /root/.acme.sh directory does not exist!'
+    echo 'Make sure to install acme.sh and obtain a certificate before running this script.'
+    exit 1
+fi
+
+echo 'Installing SELinux prerequisites'
+yum install setools-console checkpolicy policycoreutils policycoreutils-python
 
 echo 'Installing Nginx'
 cat << EOF > /etc/yum.repos.d/nginx.repo
@@ -25,9 +49,10 @@ else
 fi
 
 echo 'Setting up directory structure'
-mkdir -p /var/www/public_html
-chown -R nginx:nginx /var/www/public_html
+mkdir -p /var/www/html
+chown -R nginx:nginx /var/www/html
 restorecon -rv /var/www
+mkdir -p ${NGINX_ROOT}/certs
 mkdir -p ${NGINX_ROOT}/conf.d-enabled
 mv ${NGINX_ROOT}/nginx.conf ${NGINX_ROOT}/nginx.conf.orig
 cp conf.d/host.conf ${NGINX_ROOT}/conf.d
@@ -52,30 +77,31 @@ read -p "Hostname (FQDN): " HNAME
 sed -i "s/foobar.com/${HNAME}/g" ${NGINX_ROOT}/conf.d/host.conf
 read -p "Server method (php, static, upstream): " METHOD
 sed -i "s/#include srv-${METHOD}/include srv-${METHOD}/g" ${NGINX_ROOT}/conf.d/host.conf
-if [ ${METHOD} == 'upstream' ]
-then
-    echo 'Fixing SELinux permissions'
-    yum install policycoreutils-python setools-console
-    echo 'type=AVC msg=audit(1443806547.648:1986): avc:  denied  { name_connect } for  pid=46116 comm="nginx" dest=8080 scontext=system_u:system_r:httpd_t:s0 tcontext=system_u:object_r:http_cache_port_t:s0 tclass=tcp_socket' | audit2allow -M nginx
-    semodule -i nginx.pp
-fi
+mkdir -p ${NGINX_ROOT}/certs/${HNAME}
 
-#read -p 'Do you want to enable HPKP via hpkpinx? [y/N]' HPKP
-#if [ ! -z ${HPKP} ]
-#then
-#    if [ ${HPKP} == 'y' ] || [ ${HPKP} == 'Y' ]
-#    then
-#        sed -i "s/#include hpkp.conf;/include hpkp.conf;/g" ${NGINX_ROOT}/conf.d/host.conf
-#        echo 'HPKP enabled'
-#    fi
-#fi
+case ${METHOD} in
+    php|static)
+        echo 'Fixing document root'
+        sed -i "s@#root /var/www/html;@root /var/www/html;@g" ${NGINX_ROOT}/conf.d/host.conf
+        ;;
 
-echo 'Symlinking dehydrated certificates'
-ln -sT /opt/dehydrated/certs ${NGINX_ROOT}/certs
+    upstream)
+        echo 'Fixing SELinux permissions'
+        deploy_selinux_policy 'nginx-centos-proxy'
+        ;;
 
-echo 'Fixing permissions'
-restorecon -Rv ${NGINX_ROOT}
-restorecon -Rv /var/www
+esac
+
+echo 'Symlinking acme.sh certificates'
+ln -s "/root/.acme.sh/${HNAME}/fullchain.cer" "${NGINX_ROOT}/certs/${HNAME}/fullchain.pem"
+ln -s "/root/.acme.sh/${HNAME}/${HNAME}.key" "${NGINX_ROOT}/certs/${HNAME}/privkey.pem"
+
+echo 'Fixing SELinux permissions'
+deploy_selinux_policy 'nginx-centos-pid'
+semanage fcontext --add -t cert_t "/root/.acme.sh(/.*)?"
+restorecon -rv "/root/.acme.sh"
+restorecon -rv ${NGINX_ROOT}
+restorecon -rv /var/www
 
 echo 'Testing Nginx config'
 nginx -t
